@@ -1,17 +1,19 @@
 $session = New-PSSession -ComputerName WIN2008R2DC
 
-Add-Type -AssemblyName "PresentationFramework","PresentationCore"
+$accelerator = [PSObject].Assembly.GetType("System.Management.Automation.TypeAccelerators")
+Add-Type -AssemblyName PresentationCore, PresentationFramework -PassThru | Where-Object IsPublic | ForEach-Object { $accelerator::Add($_.Name,$_) }
 
+$currentDirectory = Split-Path $script:MyInvocation.MyCommand.Path
 
-[xml]$xaml = Get-Content -Path (Join-Path -Path (Split-Path $script:MyInvocation.MyCommand.Path) -ChildPath  "MainWindow.xaml")
+[xml]$xaml = Get-Content -Path (Join-Path -Path $currentDirectory -ChildPath  "MainWindow.xaml")
 $reader = New-Object System.Xml.XmlNodeReader $xaml 
-[System.Windows.Window]$window = [System.Windows.Markup.XamlReader]::Load($reader)
+[Window]$window = [XamlReader]::Load($reader)
 
 
-$window.FindName("MainFrame").Source = (Join-Path -Path (Split-Path $script:MyInvocation.MyCommand.Path) -ChildPath  "UserAdmin.xaml")
-[xml]$xaml = Get-Content -Path (Join-Path -Path (Split-Path $script:MyInvocation.MyCommand.Path) -ChildPath  "UserAdmin.xaml")
+$window.FindName("MainFrame").Source = (Join-Path -Path $currentDirectory -ChildPath  "UserAdmin.xaml")
+[xml]$xaml = Get-Content -Path (Join-Path -Path $currentDirectory -ChildPath  "UserAdmin.xaml")
 $reader = New-Object System.Xml.XmlNodeReader $xaml 
-$window.Content = [System.Windows.Markup.XamlReader]::Load($reader)
+$window.Content = [XamlReader]::Load($reader)
 
 $content = $window.Content
 
@@ -20,20 +22,20 @@ $username = $env:USERNAME
 $currentUser = Invoke-Command -Session $session -ScriptBlock { Get-ADUser -Identity $using:username -Properties * }
 
 <# Wire-up the UI #>
-$txtFirstName = [System.Windows.Controls.TextBox]($content.FindName("txtFirstName"))
-$txtLastName = [System.Windows.Controls.TextBox]($content.FindName("txtLastName"))
-$txtMiddleName = [System.Windows.Controls.TextBox]($content.FindName("txtMiddleName"))
-$txtDisplayName = [System.Windows.Controls.TextBox]($content.FindName("txtDisplayName"))
-$txtLogonName = [System.Windows.Controls.TextBox]($content.FindName("txtLogonName"))
-$txtEmployeeId = [System.Windows.Controls.TextBox]($content.FindName("txtEmployeeId"))
-$txtManager = [System.Windows.Controls.TextBox]($content.FindName("txtManager"))
-$txtEmail = [System.Windows.Controls.TextBox]($content.FindName("txtEmail"))
-$txtOffice = [System.Windows.Controls.TextBox]($content.FindName("txtOffice"))
-$txtCell = [System.Windows.Controls.TextBox]($content.FindName("txtCell"))
-$txtDescription = [System.Windows.Controls.TextBox]($content.FindName("txtDescription"))
-$cmbHomeDrive = [System.Windows.Controls.ComboBox]($content.FindName("cmbHomeDrive"))
-$txtHomeDirectory = [System.Windows.Controls.TextBox]($content.FindName("txtHomeDirectory"))
-$btnSubmit = [System.Windows.Controls.Button]($content.FindName("btnSubmit"))
+$txtFirstName = [TextBox]($content.FindName("txtFirstName"))
+$txtLastName = [TextBox]($content.FindName("txtLastName"))
+$txtMiddleName = [TextBox]($content.FindName("txtMiddleName"))
+$txtDisplayName = [TextBox]($content.FindName("txtDisplayName"))
+$txtLogonName = [TextBox]($content.FindName("txtLogonName"))
+$txtEmployeeId = [TextBox]($content.FindName("txtEmployeeId"))
+$txtManager = [TextBox]($content.FindName("txtManager"))
+$txtEmail = [TextBox]($content.FindName("txtEmail"))
+$txtOffice = [TextBox]($content.FindName("txtOffice"))
+$txtCell = [TextBox]($content.FindName("txtCell"))
+$txtDescription = [TextBox]($content.FindName("txtDescription"))
+$cmbHomeDrive = [ComboBox]($content.FindName("cmbHomeDrive"))
+$txtHomeDirectory = [TextBox]($content.FindName("txtHomeDirectory"))
+$btnSubmit = [Button]($content.FindName("btnSubmit"))
 
 $btnSubmit.Add_Click({
     $props = @{
@@ -45,7 +47,7 @@ $btnSubmit.Add_Click({
         Description = $txtDescription.Text
     }
     if($txtEmployeeId.Text -and (Invoke-Command -Session $session -ScriptBlock { Set-ADUser @using:props -PassThru })) {
-        [System.Windows.MessageBox]::Show("Your request has successfully been submitted.", "Submitted", [System.Windows.MessageBoxButton]::OK, [System.Windows.MessageBoxImage]::Information)
+        [MessageBox]::Show("Your request has successfully been submitted.", "Submitted", [MessageBoxButton]::OK, [MessageBoxImage]::Information)
     }
 })
 
@@ -67,7 +69,6 @@ if($currentUser.HomeDrive) {
     $cmbHomeDrive.SelectedValue = $currentUser.HomeDrive
 }
 $txtHomeDirectory.Text = $currentUser.HomeDirectory
-
 
 <# Display the window #>
 $window.ShowDialog() | Out-Null
